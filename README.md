@@ -2,6 +2,7 @@
 Use **realsense-viewer** GUI to get the x,y & z real world distance and compare the value with the result from computation.
 
  1. From Intrinsic Camera Calibration
+	 
 	 **Idea:** From YOLO detection result get xmin,xmaxmymin & ymax:  [Link](https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats#intrinsic_camera_calibration_of_the_kinect)
 > u = (xmin+xmax)/2; 
 > v = (ymin+ymax)/2; 
@@ -10,6 +11,7 @@ Use **realsense-viewer** GUI to get the x,y & z real world distance and compare 
 > Yreal = (v - cy) * Z / fy; 
 > Zreal = Z;
  2. PointCloud from PointCloud2 to get xyz
+	 
 	 **Idea:** Convert PointCloud2 to PointCloud and get the distance from the respective pixel: [Link](https://answers.ros.org/question/9239/reading-pointcloud2-in-c/)
 > sensor_msgs::convertPointCloud2ToPointCloud(*pointcloud_msg, out_cloud); 
 > x_center = (i.m_bbox.xmin+i.m_bbox.xmax)/2; 
