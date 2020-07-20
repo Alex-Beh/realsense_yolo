@@ -7,11 +7,8 @@ Panels:
         - /Global Options1
         - /Status1
         - /TF1
-        - /TF1/Status1
         - /TF1/Frames1
         - /TF1/Tree1
-        - /TF1/Tree1/rgbd_front_top_link1
-        - /TF1/Tree1/rgbd_front_top_link1/rgbd_front_top_aligned_depth_to_color_frame1
       Splitter Ratio: 0.5
     Tree Height: 728
   - Class: rviz/Selection
@@ -32,7 +29,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -63,7 +60,7 @@ Visualization Manager:
       Color: 130; 130; 130
       Color map offset: 0
       Color transform: Rainbow
-      Enabled: false
+      Enabled: true
       Excluded person IDs: ""
       Font color: 255; 255; 255
       Font color style: Same color
@@ -86,7 +83,7 @@ Visualization Manager:
       Text spacing: 1
       Topic: /spencer/perception_internal/detected_persons/rgbd_front_top/upper_body
       Unreliable: false
-      Value: false
+      Value: true
       Z offset:
         Use Z position from message: false
         Value: 0

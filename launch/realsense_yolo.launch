@@ -1,24 +1,26 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="load_realsense_driver"   default="true"/>
+    <arg name="load_realsense_driver"   default="false"/>
     <arg name="yolo"                    default="true"/>
-    <arg name="visualization"           default="true"/>
+    <arg name="visualization"           default="false"/>
     <arg name="play_from_bagfile"       default="false"/>
 
-    <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw"/>
+    <!-- <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw"/> -->
 
     <!-- Input Variable --> 
     <arg name="camera_info_topic" default="/spencer/sensors/rgbd_front_top/depth/camera_info" if="$(arg load_realsense_driver)"/>
-    <!-- <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw" if="$(arg load_realsense_driver)"/> -->
+    <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw" if="$(arg load_realsense_driver)"/>
 
     <!-- Input Variable -->
     <arg name="camera_info_topic" default="/spencer/sensors/rgbd_front_top/depth/camera_info" unless="$(arg load_realsense_driver)"/>
-    <!-- <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/depth/image_raw" unless="$(arg load_realsense_driver)"/> -->
+    <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/depth/image_raw" unless="$(arg load_realsense_driver)"/>
 
     <!-- Output Variable -->
     <arg name="detected_persons_pub_topic" default="/spencer/perception_internal/detected_persons/rgbd_front_top/upper_body"/>
     <arg name="detection_id_offset" default="0"/>
     <arg name="detection_id_increment" default="1"/>
+
+    <param name="/use_sim_time" value="true"/>
 
     <node pkg="rosbag" type="play" name="player" output="screen" args="-l --clock /home/alex-beh/ros1_ws/learn_ws/src/realsense_yolo/launch/bagfile/realsense_bag.bag" if="$(arg play_from_bagfile)"/>
 
@@ -30,10 +32,9 @@
         <!-- <arg name="initial_reset" value="true"/> -->
     </include>
      
-    <!-- <include file="$(find darknet_ros)/launch/yolo_v3.launch"/> -->
-
     <group if="$(arg yolo)">
         <include file="$(find darknet_ros)/launch/darknet_ros.launch"/>
+        <!-- <include file="$(find darknet_ros)/launch/yolo_v3.launch"/> -->
 
         <node pkg="realsense_yolo" type="realsense_yolo" name="yolov3_detector" output="screen" launch-prefix="">
             <param name="depth_image_topic" value="$(arg depth_image_topic)"/> 

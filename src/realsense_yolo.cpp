@@ -27,50 +27,42 @@ namespace realsense_yolo{
 		nodeHandle_.param("depth_image_topic", depth_topic, std::string("/spencer/sensors/rgbd_front_top/depth/image_rect_raw"));
 
 		nodeHandle_.param("detection_output", detection_output_pub, std::string("/spencer/perception_internal/detected_persons/rgbd_front_top/upper_body"));
-		nodeHandle_.param("yolo_detection_threshold", probability_threshold,float(0.7));
+		nodeHandle_.param("yolo_detection_threshold", probability_threshold,float(0.5));
 		
 		nodeHandle_.param("cameralink", camera_link, std::string("rgbd_front_top_link"));
 
 		nodeHandle_.param("pose_variance", pose_variance_, 0.05);
      	nodeHandle_.param("detection_id_increment", detection_id_increment_, 1);
-      	nodeHandle_.param("detection_id_offset",detection_id_offset_, 0);
+      	nodeHandle_.param("detection_id_offset",detection_id_offset_, 10000);
 		nodeHandle_.param("marker_array_topic", marker_array_topic,std::string("/bbox3d_marker_array"));
 		
-		LARGE_VARIANCE_ = 0.5;
+		LARGE_VARIANCE_ = 999999999.0;
       	current_detection_id_ = detection_id_offset_;
 		
 		obj_list = {"person"};
 
 		// https://answers.ros.org/question/280856/synchronizer-with-approximate-time-policy-in-a-class-c/
 		// ??? Why cannot yolo_detection_result_sub.reset() to subscribe the new topic ???
-		m_yolo_detection_result_sub.subscribe(nodeHandle_,"/darknet_ros/bounding_boxes",1000);
-		m_depth_img_sub.subscribe(nodeHandle_,depth_topic , 1000);
-		sync.reset(new Synchronizer(SyncPolicy(10),m_yolo_detection_result_sub,m_depth_img_sub));
-		sync->registerCallback(boost::bind(&realsense_yolo_detector::filterOutUnwantedDetections, this,_1, _2));
+		m_yolo_detection_result_sub.subscribe(nodeHandle_,"/darknet_ros/bounding_boxes",100);
+		m_depth_img_sub.subscribe(nodeHandle_,depth_topic , 100);
+		m_pointcloud_sub.subscribe(nodeHandle_,"/spencer/sensors/rgbd_front_top/depth_registered/points",100);
+		sync.reset(new Synchronizer(SyncPolicy(10),m_yolo_detection_result_sub,m_depth_img_sub,m_pointcloud_sub));
+		sync->registerCallback(boost::bind(&realsense_yolo_detector::filterOutUnwantedDetections, this,_1, _2,_3));
 
 		people_position_pub = nodeHandle_.advertise<spencer_tracking_msgs::DetectedPersons>(detection_output_pub, 1);
 		// camera_info_sub = nodeHandle_.subscribe<sensor_msgs::CameraInfo>(camera_info,1,&realsense_yolo_detector::camera_infoCallback,this);
 		bbox3d_pub = nodeHandle_.advertise<visualization_msgs::MarkerArray>(marker_array_topic, 1);
 		debug_yolo_pub = nodeHandle_.advertise<realsense_yolo::debug_yolo>("debug_yolo_topic", 1);
+
+		image_transport::ImageTransport it(nodeHandle_);
+		yolo_image_pub = it.advertise("detection_result", 1);
+
 	}
 
 	void realsense_yolo_detector::draw_boxes(){
 		// ROS_INFO("To be done! No 3D bounging box now!");
 		// publish to rviz for visualization
 	}
-
-
-	// double realsense_yolo_detector::pointCloud2ToZ(const sensor_msgs::PointCloud2 &msg)
-	// {
-	// 	sensor_msgs::PointCloud out_pointcloud;
-	// 	sensor_msgs::convertPointCloud2ToPointCloud(msg, out_pointcloud);
-	// 	for (int i=0; i<out_pointcloud.points.size(); i++) {
-	// 		cout << out_pointcloud.points[i].x << ", " << out_pointcloud.points[i].y << ", " << out_pointcloud.points[i].z << endl;
-	// 	}
-	// 	cout << "------" << endl;
-	// 	return out_pointcloud.points[0].z;
-	// }
-
 
 	void realsense_yolo_detector::camera_infoCallback(const sensor_msgs::CameraInfo::ConstPtr& camera_info){
 		data_lock.lock();
@@ -79,10 +71,12 @@ namespace realsense_yolo{
 		intrinsic_camera_matrix.m_fy=camera_info->K[4];
 		intrinsic_camera_matrix.m_cx=camera_info->K[2];
 		intrinsic_camera_matrix.m_cy=camera_info->K[5];
+		// ROS_INFO("%f %f %f %f",intrinsic_camera_matrix.m_fx,intrinsic_camera_matrix.m_fy,intrinsic_camera_matrix.m_cx,intrinsic_camera_matrix.m_cy);
 		data_lock.unlock();
 	}
 
-	void realsense_yolo_detector::filterOutUnwantedDetections(const darknet_ros_msgs::BoundingBoxes::ConstPtr& yolo_detection_raw_result, const sensor_msgs::Image::ConstPtr& depth_image){
+	void realsense_yolo_detector::filterOutUnwantedDetections(const darknet_ros_msgs::BoundingBoxes::ConstPtr& yolo_detection_raw_result, 
+				const sensor_msgs::Image::ConstPtr& depth_image,const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg){
 		
 		int n = yolo_detection_raw_result->bounding_boxes.size();
 		std::vector<darknet_ros_msgs::BoundingBox> filtered_detections;
@@ -148,8 +142,6 @@ namespace realsense_yolo{
 
 		try
 		{
-			// TYPE_32FC1 TYPE_16UC1
-			// BGR8 = CV_8UC3
 			cv_ptr = cv_bridge::toCvCopy(depth_image,sensor_msgs::image_encodings::TYPE_16UC1);
 		}
 		catch (cv_bridge::Exception& e)
@@ -158,26 +150,37 @@ namespace realsense_yolo{
 		}
 
 		// TODO: check for cv_bridge fail case
+		/* (row,col) --> (height,width) --> (640,480)
+		    cvImage_depth.rows=480 , cvImage_depth.cols = 640
+		   (cvImage_depth.rows,cvImage_depth.cols)
+		*/
 		cv::Mat cvImage_depth;
+		cv::Mat draw_result;
+
 		cvImage_depth = cv_ptr->image;
-		
+		draw_result = cvImage_depth.clone();
+
 		for (int i = 0; i < filtered_detections_wo_doubles.size(); i++) {
 			float pixel_distance;
 			int pixel_height = (filtered_detections_wo_doubles[i].ymax+filtered_detections_wo_doubles[i].ymin)/2;
 			int pixel_width = (filtered_detections_wo_doubles[i].xmax+filtered_detections_wo_doubles[i].xmin)/2;
-
+		
 			// TODO:  calculate the median of all the values inside the box region
 			pixel_distance = 0.001*(cv_ptr->image.at<u_int16_t>(pixel_height,pixel_width));
 
+			cv::putText(draw_result,std::to_string(pixel_distance),cv::Point2f(pixel_width,pixel_height),cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0,143,143), 2);
+			cv::circle(draw_result,cv::Point2f(pixel_width+10,pixel_height),10,cv::Scalar(0),2);
+
 			yolo_detection_xyz.emplace_back((bbox_t_3d(filtered_detections_wo_doubles[i],pixel_distance)));
-			
-			// ROS_INFO("-----> %f",0.001*(cv_ptr->image.at<u_int16_t>(cvImage_depth.rows/2,cvImage_depth.cols/2)));
 		}
 			this->draw_boxes();
 
+			sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::TYPE_16UC1, draw_result).toImageMsg();
+			yolo_image_pub.publish(msg);
+			
 			/*-------------- Publish Spencer data from Yolo detection ---------*/
 			// TODO: pass obj_list as vector into fillPeopleMessage()
-			auto detected_persons_msg = this->fillPeopleMessage(yolo_detection_xyz,"person",camera_link);
+			auto detected_persons_msg = this->fillPeopleMessage(yolo_detection_xyz,"person",camera_link,pointcloud_msg);
 			people_position_pub.publish(detected_persons_msg);
 		
 	}
@@ -185,7 +188,8 @@ namespace realsense_yolo{
 	spencer_tracking_msgs::DetectedPersons realsense_yolo_detector::fillPeopleMessage(
 			std::vector<bbox_t_3d> result_vec, 
 			std::string obj_names, 
-			std::string camera_frame_id){
+			std::string camera_frame_id,
+			const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg){
 
 		spencer_tracking_msgs::DetectedPersons  detected_persons;
 		spencer_tracking_msgs::DetectedPerson  detected_person;
@@ -194,14 +198,59 @@ namespace realsense_yolo{
 		// float xyz_array[array_length];
 		// int array_pointer = 0;
 		data_lock.lock();
-		
-		// pixel convert to real distance: https://github.com/leggedrobotics/darknet_ros/issues/103
+
 		for (auto &i : result_vec) {
-			detected_person.pose.pose.position.x = ((i.m_bbox.xmin+i.m_bbox.xmax)/2-intrinsic_camera_matrix.m_cx)*(i.m_coord/intrinsic_camera_matrix.m_fx);
-			detected_person.pose.pose.position.y = ((i.m_bbox.ymin+i.m_bbox.ymax)/2-intrinsic_camera_matrix.m_cy)*(i.m_coord/intrinsic_camera_matrix.m_fy);
-			detected_person.pose.pose.position.z = i.m_coord;
+			/*
+			Pixel convert to real distance:
+			(i) Intrinsic Camera Calibration
+			https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats#intrinsic_camera_calibration_of_the_kinect
+
+			X = (u - cx) * Z / fx;
+    		Y = (v - cy) * Z / fy;
+
+			u: 412 --- v: 263
+			fx fy cx cy ---> 390.104401 390.104401 319.192230 241.850632
+
+			***************
+			x: 0.174982890487
+			y: 0.039034537971
+			z: 0.72000002861
+
+			(ii) PointCloud from PointCloud2 to get xyz
+			https://answers.ros.org/question/9239/reading-pointcloud2-in-c/
+			*/
+			bool distance_from_pointcloud= true;
+
+			int x_center,y_center;
+			float Xreal,Yreal,Zreal;
+			sensor_msgs::PointCloud out_cloud;
+			sensor_msgs::convertPointCloud2ToPointCloud(*pointcloud_msg, out_cloud);
+
+			x_center = (i.m_bbox.xmin+i.m_bbox.xmax)/2;
+			y_center = (i.m_bbox.ymin+i.m_bbox.ymax)/2;
+
+			int ind = (x_center) + (y_center)*pointcloud_msg->width;
+
+			Xreal = (float)out_cloud.points[ind].x;
+			Yreal = (float)out_cloud.points[ind].y;
+			Zreal = (float)out_cloud.points[ind].z;
+			
+			if (distance_from_pointcloud){
+				detected_person.pose.pose.position.x = Xreal;
+				detected_person.pose.pose.position.y = Yreal;
+				detected_person.pose.pose.position.z = Zreal;
+			}
+			else{
+				detected_person.pose.pose.position.x = ((i.m_bbox.xmin+i.m_bbox.xmax)/2-intrinsic_camera_matrix.m_cx)*(i.m_coord/intrinsic_camera_matrix.m_fx);
+				detected_person.pose.pose.position.y = ((i.m_bbox.ymin+i.m_bbox.ymax)/2-intrinsic_camera_matrix.m_cy)*(i.m_coord/intrinsic_camera_matrix.m_fy);
+				detected_person.pose.pose.position.z = i.m_coord;
+			}
 			detected_person.modality = spencer_tracking_msgs::DetectedPerson::MODALITY_GENERIC_YOLO;
 			detected_person.confidence = i.m_bbox.probability;
+
+			// ROS_INFO("			u: %lu --- v: %lu",(i.m_bbox.xmin+i.m_bbox.xmax)/2,(i.m_bbox.ymin+i.m_bbox.ymax)/2);
+			// ROS_INFO("Intrinsic		x: %lf --- y: %lf --- z:%lf",detected_person.pose.pose.position.x,detected_person.pose.pose.position.y,detected_person.pose.pose.position.z);
+			// ROS_INFO("PCL			x: %f --- y: %f --- z:%f",Xreal,Yreal,Zreal);
 
 			// TODO: pose_variance???
 			detected_person.pose.covariance[0*6 + 0] = pose_variance_;
@@ -216,11 +265,13 @@ namespace realsense_yolo{
 			
 			detected_persons.detections.push_back(detected_person);
 
+			// ??? how to assign an array to ROS msg array type
 			// debug_message.person_xyz[array_pointer++] = detected_person.pose.pose.position.x;
 			// debug_message.person_xyz[array_pointer++] = detected_person.pose.pose.position.y;
 			// debug_message.person_xyz[array_pointer++] = detected_person.pose.pose.position.z;
    		}
 		// debug_message.person_xyz = xyz_array;
+
 		data_lock.unlock();
 
 		detected_persons.header.stamp = ros::Time::now();

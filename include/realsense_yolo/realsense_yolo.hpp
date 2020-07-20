@@ -10,9 +10,12 @@
 #include <message_filters/synchronizer.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <sensor_msgs/Image.h>
-#include <image_transport/image_transport.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/image_encodings.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/PointCloud.h>
+#include <sensor_msgs/point_cloud_conversion.h>
+#include <image_transport/image_transport.h>
 #include <visualization_msgs/MarkerArray.h>
 
 // darknet_ros
@@ -21,6 +24,7 @@
 
 // Opencv
 #include <cv_bridge/cv_bridge.h>
+#include <opencv2/core/core.hpp>
 
 // Spencer
 #include <spencer_tracking_msgs/DetectedPersons.h>
@@ -57,6 +61,7 @@ namespace realsense_yolo{
 
 	        ros::Publisher people_position_pub,bbox3d_pub,debug_yolo_pub;
             ros::Subscriber camera_info_sub;
+		    image_transport::Publisher yolo_image_pub;
 
             // Parameter for nh.param()
             std::string detection_output_pub, camera_link,marker_array_topic,depth_topic,camera_info;
@@ -74,16 +79,19 @@ namespace realsense_yolo{
 
             message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> m_yolo_detection_result_sub;
             message_filters::Subscriber<sensor_msgs::Image> m_depth_img_sub;
+            message_filters::Subscriber<sensor_msgs::PointCloud2> m_pointcloud_sub;
 
-            typedef message_filters::sync_policies::ApproximateTime<darknet_ros_msgs::BoundingBoxes, sensor_msgs::Image> SyncPolicy;
+            typedef message_filters::sync_policies::ApproximateTime<darknet_ros_msgs::BoundingBoxes, sensor_msgs::Image,sensor_msgs::PointCloud2> SyncPolicy;
             typedef message_filters::Synchronizer<SyncPolicy> Synchronizer;
             boost::shared_ptr<Synchronizer> sync;
             
             // Function & Callback function
             void init();
-            void filterOutUnwantedDetections(const darknet_ros_msgs::BoundingBoxes::ConstPtr& yolo_detection_raw_result, const sensor_msgs::Image::ConstPtr& depth_image);
+            void filterOutUnwantedDetections(const darknet_ros_msgs::BoundingBoxes::ConstPtr& yolo_detection_raw_result, const sensor_msgs::Image::ConstPtr& depth_image,
+                    const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg);
             void draw_boxes();
             void camera_infoCallback(const sensor_msgs::CameraInfo::ConstPtr& camera_info);
-            spencer_tracking_msgs::DetectedPersons fillPeopleMessage(std::vector<bbox_t_3d> result_vec, std::string obj_names, std::string camera_frame_id);
+            spencer_tracking_msgs::DetectedPersons fillPeopleMessage(std::vector<bbox_t_3d> result_vec, std::string obj_names, std::string camera_frame_id,
+                    const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg);
     };
 }
