@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   spencer_tracking_msgs
   message_generation
+  pcl_ros
 )
 
 ################################################
@@ -24,8 +25,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate messages in the 'msg' folder
 add_message_files(
-   #DIRECTORY messages/msg
-   FILES debug_yolo.msg
+   FILES debug_yolo.msg BoundingBoxes3d.msg BoundingBox3d.msg
 )
 
 ## Generate services in the 'srv' folder

@@ -9,6 +9,7 @@ Panels:
         - /TF1
         - /TF1/Frames1
         - /TF1/Tree1
+        - /MarkerArray1
       Splitter Ratio: 0.5
     Tree Height: 728
   - Class: rviz/Selection
@@ -134,6 +135,8 @@ Visualization Manager:
           Value: false
         rgbd_front_top_link:
           Value: true
+        yolo_detection_link:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
@@ -149,7 +152,17 @@ Visualization Manager:
           rgbd_front_top_depth_frame:
             rgbd_front_top_depth_optical_frame:
               {}
+          yolo_detection_link:
+            {}
       Update Interval: 0
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: true
+      Marker Topic: /bbox3d_marker_array
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
       Value: true
   Enabled: true
   Global Options:

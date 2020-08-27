@@ -3,6 +3,7 @@
 // c++
 #include <vector>
 #include <mutex>  
+#include <math.h>       /* isnan, sqrt */
 
 // ROS
 #include <ros/ros.h>
@@ -17,10 +18,15 @@
 #include <sensor_msgs/point_cloud_conversion.h>
 #include <image_transport/image_transport.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <tf/transform_listener.h>
 
 // darknet_ros
 #include <darknet_ros_msgs/BoundingBoxes.h>
 #include <darknet_ros_msgs/BoundingBox.h>
+
+// pcl
+#include <pcl_ros/point_cloud.h>
+#include <pcl_ros/transforms.h>
 
 // Opencv
 #include <cv_bridge/cv_bridge.h>
@@ -30,8 +36,9 @@
 #include <spencer_tracking_msgs/DetectedPersons.h>
 #include <spencer_tracking_msgs/DetectedPerson.h>
 
-// realsense_yolo
+// realsense_yolo_msgs
 #include <realsense_yolo/debug_yolo.h>
+#include <realsense_yolo/BoundingBoxes3d.h>
 
 namespace realsense_yolo{
     
@@ -44,15 +51,13 @@ namespace realsense_yolo{
     } bbox_t_3d;
 
     typedef struct camera_info_vector{
-        // camera_info_vector(float fx,float fy,float cx,float cy)
-        //     :m_fx(fx),m_fy(fy),m_cx(cx),m_cy(cy){}
         float m_fx,m_fy,m_cx,m_cy;
     } camera_info_vector;
 
     class realsense_yolo_detector{
         public:
             // Constructor
-            explicit realsense_yolo_detector(ros::NodeHandle nodeHandle_,const sensor_msgs::CameraInfo::ConstPtr& camera_info);
+            explicit realsense_yolo_detector(ros::NodeHandle& nodeHandle_,const sensor_msgs::CameraInfo::ConstPtr& camera_info_msg);
             // Destructor
             ~realsense_yolo_detector();
         
@@ -60,11 +65,11 @@ namespace realsense_yolo{
             ros::NodeHandle nodeHandle_;
 
 	        ros::Publisher people_position_pub,bbox3d_pub,debug_yolo_pub;
-            ros::Subscriber camera_info_sub;
 		    image_transport::Publisher yolo_image_pub;
+            tf::TransformListener tfListener_;
 
             // Parameter for nh.param()
-            std::string detection_output_pub, camera_link,marker_array_topic,depth_topic,camera_info;
+            std::string detection_output_pub, camera_link, marker_array_topic, depth_topic;
             float probability_threshold;
             std::vector<std::string> obj_list;
 
@@ -89,9 +94,12 @@ namespace realsense_yolo{
             void init();
             void filterOutUnwantedDetections(const darknet_ros_msgs::BoundingBoxes::ConstPtr& yolo_detection_raw_result, const sensor_msgs::Image::ConstPtr& depth_image,
                     const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg);
-            void draw_boxes();
-            void camera_infoCallback(const sensor_msgs::CameraInfo::ConstPtr& camera_info);
+            void camera_infoCallback(const sensor_msgs::CameraInfo::ConstPtr& camera_info_msg);
             spencer_tracking_msgs::DetectedPersons fillPeopleMessage(std::vector<bbox_t_3d> result_vec, std::string obj_names, std::string camera_frame_id,
                     const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg);
+
+            void draw_boxes(const realsense_yolo::BoundingBoxes3d boxes);
+            void calculate_boxes(const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg,  std::vector<darknet_ros_msgs::BoundingBox> original_bboxes_);
+
     };
 }
