@@ -10,9 +10,9 @@ The first object detecion model that I used is YOLOv3. I extract the 3D real wor
 -------------
 
 ### Dependencies
-	- [darknet_ros](https://github.com/leggedrobotics/darknet_ros)
-	- [dnn_detect](https://github.com/UbiquityRobotics/dnn_detect)
-	- OpenCV 3
+* [darknet_ros](https://github.com/leggedrobotics/darknet_ros)
+* [dnn_detect](https://github.com/UbiquityRobotics/dnn_detect)
+* OpenCV 3
 -------------
 ### Usage
 
@@ -24,13 +24,14 @@ The first object detecion model that I used is YOLOv3. I extract the 3D real wor
 	![From_Intrinsic_Camera_Calibration](doc/images/From_Intrinsic_Camera_Calibration.png)
 	
  2. PointCloud from PointCloud2 to get xyz <br/>
-	 **Idea:** Convert PointCloud2 to PointCloud and get the distance from the respective pixel [Link](https://answers.ros.org/question/9239/reading-pointcloud2-in-c/)
-![PointCloud_from_PointCloud2_to_get_xyz](doc/images/PointCloud_from_PointCloud2_to_get_xyz.png)
+	 **Idea:** Convert PointCloud2 to PointCloud and get the distance from the respective pixel [Link](https://answers.ros.org/question/9239/reading-pointcloud2-in-c/) <br/>
+
+	![PointCloud_from_PointCloud2_to_get_xyz](doc/images/PointCloud_from_PointCloud2_to_get_xyz.png)
 -------------
 ### Troubleshooting
 1. Theora & Compressed Depth Image Transport **Error** while rosbag record
 	* cv_bridge exception: '[16UC1] is not a color format. but [bgr8] is.
-	* Compressed Depth Image Transport - Compression requires single-channel 32bit-floating point or 16bit raw depth images (input format is: rgb8). <br/>
+	* Compressed Depth Image Transport - Compression requires single-channel 32bit-floating point or 16bit raw depth images (input format is: rgb8). 
 	Solution: [Link](https://github.com/IntelRealSense/realsense-ros/issues/315#issuecomment-531382378)
 
 	```
