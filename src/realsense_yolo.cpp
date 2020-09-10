@@ -30,10 +30,10 @@ namespace realsense_yolo{
 		// parameters name , variable_name, default value
 		nodeHandle_.param("depth_image_topic", depth_topic, std::string("/spencer/sensors/rgbd_front_top/depth/image_rect_raw"));
 
-		nodeHandle_.param("detection_output", detection_output_pub, std::string("/spencer/perception_internal/detected_persons/rgbd_front_top/hog"));
+		nodeHandle_.param("detection_output", detection_output_pub, std::string("/spencer/perception_internal/detected_persons/rgbd_front_top/upper_body"));
 		nodeHandle_.param("yolo_detection_threshold", probability_threshold,float(0.5));
 		
-		nodeHandle_.param("cameralink", camera_link, std::string("camera_link_yolo"));
+		nodeHandle_.param("cameralink", camera_link, std::string("rgbd_front_top_depth_optical_frame"));
 
 		nodeHandle_.param("pose_variance", pose_variance_, 0.05);
      	nodeHandle_.param("detection_id_increment", detection_id_increment_, 1);
@@ -78,8 +78,7 @@ namespace realsense_yolo{
 	}
 
 	void realsense_yolo_detector::filterOutUnwantedDetections(const darknet_ros_msgs::BoundingBoxes::ConstPtr& yolo_detection_raw_result, 
-				const sensor_msgs::Image::ConstPtr& depth_image,const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg){
-		
+				const sensor_msgs::Image::ConstPtr& depth_image,const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg){		
 		int n = yolo_detection_raw_result->bounding_boxes.size();
 		std::vector<darknet_ros_msgs::BoundingBox> filtered_detections;
 		std::vector<int> erase_these_elements;
@@ -92,7 +91,7 @@ namespace realsense_yolo{
 				
 		if(n>0)
 		{
-			for(int i=i;i<n;i++){
+			for(int i=0;i<n;i++){
 				for(auto &it:obj_list){
 					if(yolo_detection_raw_result->bounding_boxes[i].Class == it && yolo_detection_raw_result->bounding_boxes[i].probability>probability_threshold){
 						filtered_detections.push_back(yolo_detection_raw_result->bounding_boxes[i]);
@@ -133,7 +132,7 @@ namespace realsense_yolo{
 				}
 			}
 		
-			// ROS_INFO("Detected %lu person!",filtered_detections_wo_doubles.size());
+			// ROS_INFO("Raw: %d --- Detected %lu person!",n,filtered_detections_wo_doubles.size());
 			debug_message.no_detected_person = filtered_detections_wo_doubles.size();
 			debug_message.no_deleted_detection = erase_these_elements.size();
 
@@ -179,10 +178,15 @@ namespace realsense_yolo{
 		auto detected_persons_msg = this->fillPeopleMessage(yolo_detection_xyz,"person",camera_link,pointcloud_msg);
 		people_position_pub.publish(detected_persons_msg);
 		
-		this->calculate_boxes(pointcloud_msg,yolo_detection_raw_result->bounding_boxes);
+		if(boudingbox_pcl){
+			this->calculate_boxes_pcl(pointcloud_msg,yolo_detection_raw_result->bounding_boxes);
+		}
+		else{
+			this->calculate_boxes(yolo_detection_xyz);
+		}
 	}
 
-	void realsense_yolo_detector::calculate_boxes(const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg,
+	void realsense_yolo_detector::calculate_boxes_pcl(const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg,
 			std::vector<darknet_ros_msgs::BoundingBox> original_bboxes_){
 		/*
 		Reference Link: https://github.com/IntelligentRoboticsLabs/gb_visual_detection_3d
@@ -271,6 +275,28 @@ namespace realsense_yolo{
 		}
 	}
 
+	void realsense_yolo_detector::calculate_boxes(std::vector<bbox_t_3d> result_vec){
+		realsense_yolo::BoundingBoxes3d boxes;
+
+  		boxes.header.frame_id = camera_link;
+		// boxes.header.stamp = point_cloud_.header.stamp;
+
+		for (auto &i : result_vec) {
+			realsense_yolo::BoundingBox3d bbx_msg;
+			bbx_msg.Class = i.m_bbox.Class;
+			bbx_msg.probability = i.m_bbox.probability;
+			bbx_msg.xmin = i.m_bbox.xmin;
+			bbx_msg.xmax = i.m_bbox.xmax;
+			bbx_msg.ymin = i.m_bbox.ymin;
+			bbx_msg.ymax = i.m_bbox.ymax;
+			bbx_msg.zmin = 0.5*i.m_coord;
+			bbx_msg.zmax = i.m_coord;
+			boxes.bounding_boxes.push_back(bbx_msg);
+		}
+
+		this->draw_boxes(boxes);
+	}
+
 	void realsense_yolo_detector::draw_boxes(const realsense_yolo::BoundingBoxes3d boxes){
 		// publish 3D bounding box to rviz for visualization
 		visualization_msgs::MarkerArray msg;
@@ -284,18 +310,40 @@ namespace realsense_yolo{
 			bbx_marker.header.stamp = boxes.header.stamp;
 			bbx_marker.ns = "darknet3d";
 			bbx_marker.id = counter_id++;
-			bbx_marker.type = visualization_msgs::Marker::CUBE;
+
 			bbx_marker.action = visualization_msgs::Marker::ADD;
-			bbx_marker.pose.position.x = (bb.xmax + bb.xmin) / 2.0;
-			bbx_marker.pose.position.y = (bb.ymax + bb.ymin) / 2.0;
-			bbx_marker.pose.position.z = (bb.zmax + bb.zmin) / 2.0;
+
 			bbx_marker.pose.orientation.x = 0.0;
 			bbx_marker.pose.orientation.y = 0.0;
 			bbx_marker.pose.orientation.z = 0.0;
 			bbx_marker.pose.orientation.w = 1.0;
-			bbx_marker.scale.x = (bb.xmax - bb.xmin);
-			bbx_marker.scale.y = (bb.ymax - bb.ymin);
-			bbx_marker.scale.z = (bb.zmax - bb.zmin);
+
+			if(boudingbox_pcl){
+				bbx_marker.type = visualization_msgs::Marker::CUBE;
+
+				bbx_marker.pose.position.x = (bb.xmax + bb.xmin) / 2.0;
+				bbx_marker.pose.position.y = (bb.ymax + bb.ymin) / 2.0;
+				bbx_marker.pose.position.z = (bb.zmax + bb.zmin) / 2.0;
+				
+				bbx_marker.scale.x = (bb.xmax - bb.xmin);
+				bbx_marker.scale.y = (bb.ymax - bb.ymin);
+				bbx_marker.scale.z = (bb.zmax - bb.zmin);
+			}
+
+			else{
+				bbx_marker.type = visualization_msgs::Marker::MESH_RESOURCE;
+
+				bbx_marker.scale.x = 1;
+				bbx_marker.scale.y = 1;
+				bbx_marker.scale.z = 1;
+
+				bbx_marker.pose.position.x = ((bb.xmin+bb.xmax)/2-intrinsic_camera_matrix.m_cx)*(bb.zmax/intrinsic_camera_matrix.m_fx);
+				bbx_marker.pose.position.y = ((bb.ymin+bb.ymax)/2-intrinsic_camera_matrix.m_cy)*(bb.zmax/intrinsic_camera_matrix.m_fy);
+				bbx_marker.pose.position.z = bb.zmax;
+
+				bbx_marker.mesh_resource = "package://spencer_tracking_rviz_plugin/media/animated_walking_man.mesh";
+			}
+
 			bbx_marker.color.b = 0;
 			bbx_marker.color.g = bb.probability * 255.0;
 			bbx_marker.color.r = (1.0 - bb.probability) * 255.0;
@@ -315,7 +363,6 @@ namespace realsense_yolo{
 			const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg){
 
 		spencer_tracking_msgs::DetectedPersons  detected_persons;
-		spencer_tracking_msgs::DetectedPerson  detected_person;
 
 		data_lock.lock();
 
@@ -334,6 +381,9 @@ namespace realsense_yolo{
 
 			int x_center,y_center;
 			float Xreal,Yreal,Zreal;
+
+			spencer_tracking_msgs::DetectedPerson  detected_person;
+			
 			sensor_msgs::PointCloud out_cloud;
 			sensor_msgs::convertPointCloud2ToPointCloud(*pointcloud_msg, out_cloud);
 
@@ -348,7 +398,7 @@ namespace realsense_yolo{
 			
 			if (distance_from_pointcloud){
 				// ??: hardcode the transformation for position x, need to find out why it is wrong
-				detected_person.pose.pose.position.x = -Xreal;
+				detected_person.pose.pose.position.x = Xreal;
 				detected_person.pose.pose.position.y = Yreal;
 				detected_person.pose.pose.position.z = Zreal;
 			}
@@ -361,7 +411,9 @@ namespace realsense_yolo{
 			if(isnan(detected_person.pose.pose.position.x)|isnan(detected_person.pose.pose.position.y)|isnan(detected_person.pose.pose.position.z)){
 				nan_value = true;
 			}
-			detected_person.modality = spencer_tracking_msgs::DetectedPerson::MODALITY_GENERIC_YOLO;
+			
+			detected_person.modality = spencer_tracking_msgs::DetectedPerson::MODALITY_GENERIC_RGBD;
+			// detected_person.modality = spencer_tracking_msgs::DetectedPerson::MODALITY_GENERIC_YOLO;
 			detected_person.confidence = i.m_bbox.probability;
 
 			// ??: pose_variance

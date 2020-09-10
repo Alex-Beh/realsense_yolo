@@ -47,7 +47,7 @@ namespace realsense_yolo{
             :m_bbox(bbox),m_coord(coord){}
 
         darknet_ros_msgs::BoundingBox m_bbox;
-        float m_coord;
+        float m_coord;                      // depth distance 
     } bbox_t_3d;
 
     typedef struct camera_info_vector{
@@ -81,6 +81,7 @@ namespace realsense_yolo{
             std::mutex data_lock;
             camera_info_vector intrinsic_camera_matrix;         // ?? why don't need constructor in the typedef struct 
             realsense_yolo::debug_yolo debug_message;
+            bool boudingbox_pcl = false;
 
             message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> m_yolo_detection_result_sub;
             message_filters::Subscriber<sensor_msgs::Image> m_depth_img_sub;
@@ -99,7 +100,7 @@ namespace realsense_yolo{
                     const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg);
 
             void draw_boxes(const realsense_yolo::BoundingBoxes3d boxes);
-            void calculate_boxes(const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg,  std::vector<darknet_ros_msgs::BoundingBox> original_bboxes_);
-
+            void calculate_boxes_pcl(const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg,  std::vector<darknet_ros_msgs::BoundingBox> original_bboxes_);
+            void calculate_boxes(std::vector<bbox_t_3d> result_vec);
     };
 }
