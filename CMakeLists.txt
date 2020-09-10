@@ -1,13 +1,15 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 2.8)
 project(realsense_yolo)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_C_FLAGS "-Wall -Wno-unused-result -Wno-unknown-pragmas -Wno-unused-variable -Wfatal-errors -fPIC ${CMAKE_C_FLAGS}")
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(OpenCV 2 REQUIRED)
+find_package(OpenCV 3 REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
-  cv_bridge2
+  cv_bridge
   roscpp
   rospy
   std_msgs
@@ -16,7 +18,29 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   spencer_tracking_msgs
   message_generation
+  pcl_ros
 )
+
+find_package(CUDA REQUIRED)
+if (CUDA_FOUND)
+  find_package(CUDA)
+  message(STATUS "CUDA Version: ${CUDA_VERSION_STRINGS}")
+  message(STATUS "CUDA Libararies from realsense_yolo: ${CUDA_LIBRARIES}")
+  set(
+    CUDA_NVCC_FLAGS
+    ${CUDA_NVCC_FLAGS};
+    -O3
+    -gencode arch=compute_30,code=sm_30
+    -gencode arch=compute_35,code=sm_35
+    -gencode arch=compute_50,code=[sm_50,compute_50]
+    -gencode arch=compute_52,code=[sm_52,compute_52]
+    -gencode arch=compute_61,code=sm_61
+    -gencode arch=compute_62,code=sm_62
+  )
+  add_definitions(-DGPU)
+else()
+  list(APPEND LIBRARIES "m")
+endif()
 
 ################################################
 ## Declare ROS messages, services and actions ##
@@ -24,8 +48,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## Generate messages in the 'msg' folder
 add_message_files(
-   #DIRECTORY messages/msg
-   FILES debug_yolo.msg
+   FILES debug_yolo.msg BoundingBoxes3d.msg BoundingBox3d.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -81,6 +104,8 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES realsense_yolo
    CATKIN_DEPENDS roscpp rospy sensor_msgs std_msgs message_runtime
+   LIBRARIES
+    ${PROJECT_NAME}_lib
 #  DEPENDS system_lib
 )
 
@@ -102,6 +127,7 @@ if (CUDA_FOUND)
     ${CUDA_TOOLKIT_ROOT_DIR}/lib64
   )
 
+  if(FALSE)
   cuda_add_library(${PROJECT_NAME}_lib
     ${PROJECT_LIB_FILES} ${DARKNET_CORE_FILES}
     ${DARKNET_CUDA_FILES}
@@ -113,12 +139,19 @@ if (CUDA_FOUND)
     cublas
     curand
   )
+  endif()
 
   cuda_add_executable(realsense_yolo src/realsense_yolo_node.cpp src/realsense_yolo.cpp)
   target_link_libraries(realsense_yolo ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
+  cuda_add_executable(mobilessd_adaptor src/mobilessd_node.cpp src/realsense_yolo.cpp)
+  target_link_libraries(mobilessd_adaptor ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
 else()
   add_executable(realsense_yolo src/realsense_yolo_node.cpp src/realsense_yolo.cpp)
   target_link_libraries(realsense_yolo ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+  add_executable(mobilessd_adaptor src/mobilessd_node.cpp src/realsense_yolo.cpp)
+  target_link_libraries(mobilessd_adaptor ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 endif()

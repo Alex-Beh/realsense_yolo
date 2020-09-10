@@ -6,12 +6,11 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /DetectedPersons1
         - /TF1
-        - /TF1/Status1
         - /TF1/Frames1
         - /TF1/Tree1
-        - /TF1/Tree1/rgbd_front_top_link1
-        - /TF1/Tree1/rgbd_front_top_link1/rgbd_front_top_aligned_depth_to_color_frame1
+        - /MarkerArray1
       Splitter Ratio: 0.5
     Tree Height: 728
   - Class: rviz/Selection
@@ -63,7 +62,7 @@ Visualization Manager:
       Color: 130; 130; 130
       Color map offset: 0
       Color transform: Rainbow
-      Enabled: false
+      Enabled: true
       Excluded person IDs: ""
       Font color: 255; 255; 255
       Font color style: Same color
@@ -86,7 +85,7 @@ Visualization Manager:
       Text spacing: 1
       Topic: /spencer/perception_internal/detected_persons/rgbd_front_top/upper_body
       Unreliable: false
-      Value: false
+      Value: true
       Z offset:
         Use Z position from message: false
         Value: 0
@@ -125,7 +124,11 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        camera_link_yolo:
+          Value: true
         rgbd_front_top_aligned_depth_to_color_frame:
+          Value: false
+        rgbd_front_top_aligned_depth_to_infra1_frame:
           Value: false
         rgbd_front_top_color_frame:
           Value: false
@@ -135,8 +138,16 @@ Visualization Manager:
           Value: false
         rgbd_front_top_depth_optical_frame:
           Value: false
+        rgbd_front_top_infra1_frame:
+          Value: false
+        rgbd_front_top_infra1_optical_frame:
+          Value: false
+        rgbd_front_top_infra2_frame:
+          Value: false
+        rgbd_front_top_infra2_optical_frame:
+          Value: false
         rgbd_front_top_link:
-          Value: true
+          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
@@ -144,16 +155,34 @@ Visualization Manager:
       Show Names: true
       Tree:
         rgbd_front_top_link:
+          camera_link_yolo:
+            {}
           rgbd_front_top_aligned_depth_to_color_frame:
             rgbd_front_top_color_optical_frame:
+              {}
+          rgbd_front_top_aligned_depth_to_infra1_frame:
+            rgbd_front_top_infra1_optical_frame:
               {}
           rgbd_front_top_color_frame:
             {}
           rgbd_front_top_depth_frame:
             rgbd_front_top_depth_optical_frame:
               {}
+          rgbd_front_top_infra1_frame:
+            {}
+          rgbd_front_top_infra2_frame:
+            rgbd_front_top_infra2_optical_frame:
+              {}
       Update Interval: 0
       Value: true
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /bbox3d_marker_array
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -182,7 +211,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.3995530605316162
+      Distance: 8.074285507202148
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -197,10 +226,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7153981924057007
+      Pitch: 0.7303978204727173
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 3.6204092502593994
+      Yaw: 3.715425729751587
     Saved: ~
 Window Geometry:
   Displays:
