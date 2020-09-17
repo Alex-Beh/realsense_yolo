@@ -31,7 +31,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud2
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -124,55 +124,32 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        camera_link_yolo:
+        rgbd_front_top:
           Value: true
-        rgbd_front_top_aligned_depth_to_color_frame:
-          Value: false
-        rgbd_front_top_aligned_depth_to_infra1_frame:
-          Value: false
-        rgbd_front_top_color_frame:
-          Value: false
-        rgbd_front_top_color_optical_frame:
-          Value: false
-        rgbd_front_top_depth_frame:
-          Value: false
-        rgbd_front_top_depth_optical_frame:
-          Value: false
-        rgbd_front_top_infra1_frame:
-          Value: false
-        rgbd_front_top_infra1_optical_frame:
-          Value: false
-        rgbd_front_top_infra2_frame:
-          Value: false
-        rgbd_front_top_infra2_optical_frame:
-          Value: false
-        rgbd_front_top_link:
-          Value: false
+        spencer/sensors/rgbd_front_top_camera_center:
+          Value: true
+        spencer/sensors/rgbd_front_top_left_camera_frame:
+          Value: true
+        spencer/sensors/rgbd_front_top_left_camera_optical_frame:
+          Value: true
+        spencer/sensors/rgbd_front_top_right_camera_frame:
+          Value: true
+        spencer/sensors/rgbd_front_top_right_camera_optical_frame:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        rgbd_front_top_link:
-          camera_link_yolo:
-            {}
-          rgbd_front_top_aligned_depth_to_color_frame:
-            rgbd_front_top_color_optical_frame:
-              {}
-          rgbd_front_top_aligned_depth_to_infra1_frame:
-            rgbd_front_top_infra1_optical_frame:
-              {}
-          rgbd_front_top_color_frame:
-            {}
-          rgbd_front_top_depth_frame:
-            rgbd_front_top_depth_optical_frame:
-              {}
-          rgbd_front_top_infra1_frame:
-            {}
-          rgbd_front_top_infra2_frame:
-            rgbd_front_top_infra2_optical_frame:
-              {}
+        rgbd_front_top:
+          spencer/sensors/rgbd_front_top_camera_center:
+            spencer/sensors/rgbd_front_top_left_camera_frame:
+              spencer/sensors/rgbd_front_top_left_camera_optical_frame:
+                {}
+            spencer/sensors/rgbd_front_top_right_camera_frame:
+              spencer/sensors/rgbd_front_top_right_camera_optical_frame:
+                {}
       Update Interval: 0
       Value: true
     - Class: rviz/MarkerArray
@@ -187,7 +164,7 @@ Visualization Manager:
   Global Options:
     Background Color: 48; 48; 48
     Default Light: true
-    Fixed Frame: rgbd_front_top_link
+    Fixed Frame: rgbd_front_top
     Frame Rate: 30
   Name: root
   Tools:
@@ -211,7 +188,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 8.074285507202148
+      Distance: 12.705044746398926
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
