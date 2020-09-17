@@ -69,7 +69,7 @@ namespace realsense_yolo{
             tf::TransformListener tfListener_;
 
             // Parameter for nh.param()
-            std::string detection_output_pub, camera_link, marker_array_topic, depth_topic;
+            std::string detection_output_pub, camera_link, marker_array_topic, depth_topic,pointcloud2_topic;
             float probability_threshold;
             std::vector<std::string> obj_list;
 

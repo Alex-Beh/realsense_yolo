@@ -29,11 +29,11 @@ namespace realsense_yolo{
 
 		// parameters name , variable_name, default value
 		nodeHandle_.param("depth_image_topic", depth_topic, std::string("/spencer/sensors/rgbd_front_top/depth/image_rect_raw"));
+		nodeHandle_.param("pointcloud2_topic", pointcloud2_topic, std::string("/spencer/sensors/rgbd_front_top/depth_registered/points"));
+		nodeHandle_.param("cameralink", camera_link, std::string("rgbd_front_top_depth_optical_frame"));
 
 		nodeHandle_.param("detection_output", detection_output_pub, std::string("/spencer/perception_internal/detected_persons/rgbd_front_top/upper_body"));
 		nodeHandle_.param("yolo_detection_threshold", probability_threshold,float(0.5));
-		
-		nodeHandle_.param("cameralink", camera_link, std::string("rgbd_front_top_depth_optical_frame"));
 
 		nodeHandle_.param("pose_variance", pose_variance_, 0.05);
      	nodeHandle_.param("detection_id_increment", detection_id_increment_, 1);
@@ -51,7 +51,7 @@ namespace realsense_yolo{
 		// Set queue size to 1 because generating a queue here will only pile up images and delay the output by the amount of queued images
 		m_yolo_detection_result_sub.subscribe(nodeHandle_,"/darknet_ros/bounding_boxes",1);
 		m_depth_img_sub.subscribe(nodeHandle_,depth_topic , 1);
-		m_pointcloud_sub.subscribe(nodeHandle_,"/spencer/sensors/rgbd_front_top/depth_registered/points",1);
+		m_pointcloud_sub.subscribe(nodeHandle_,pointcloud2_topic,1);
 		sync.reset(new Synchronizer(SyncPolicy(10),m_yolo_detection_result_sub,m_depth_img_sub,m_pointcloud_sub));
 		sync->registerCallback(boost::bind(&realsense_yolo_detector::filterOutUnwantedDetections, this,_1, _2,_3));
 

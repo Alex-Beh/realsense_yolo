@@ -1,46 +1,78 @@
 <?xml version="1.0"?>
 <launch>
-    <arg name="load_realsense_driver"   default="true"/>
-    <arg name="yolo"                    default="true"/>
-    <arg name="visualization"           default="true"/>
+    <arg name="load_realsense_driver"   default="false"/>
+    <arg name="load_zed_driver"         default="true"/>
+
+    <arg name="yolo"                    default="false"/>
+    <arg name="visualization"           default="false"/>
     <arg name="play_from_bagfile"       default="false"/>
 
-    <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw"/>
-    <arg name="camera_info_topic" default="/spencer/sensors/rgbd_front_top/depth/camera_info"/>
+    <!-- Input Variable -->
+    <group if="$(arg load_realsense_driver)">
+        <arg name="depth_image_topic_" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw"/>
+        <arg name="camera_info_topic"  default="/spencer/sensors/rgbd_front_top/depth/camera_info"/>
+    </group>
+
+    <arg name="depth_image_topic_" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw" if="$(arg load_realsense_driver)"/>
+    <arg name="camera_info_topic"  default="/spencer/sensors/rgbd_front_top/depth/camera_info" if="$(arg load_realsense_driver)"/>
+
+    <!-- this part is not working.... I don't know why yet.... -->
+    <group if="$(arg load_zed_driver)">
+        <arg name="depth_image_topic_" default="/spencer/sensors/rgbd_front_top/zed_node/depth/depth_registered"/>
+        <arg name="camera_info_topic"   default="/spencer/sensors/rgbd_front_top/zed_node/depth/camera_info"/>
+    </group>
+    
+    <arg name="depth_image_topic_" default="/spencer/sensors/rgbd_front_top/zed_node/depth/depth_registered"  if="$(arg load_zed_driver)"/>
+    <arg name="camera_info_topic" default="/spencer/sensors/rgbd_front_top/zed_node/depth/camera_info"  if="$(arg load_zed_driver)"/>
+    <arg name="pointcloud2_topic" default="/spencer/sensors/rgbd_front_top/zed_node/point_cloud/cloud_registered"  if="$(arg load_zed_driver)"/>
+    <arg name="camera_link" default="rgbd_front_top_link"  if="$(arg load_zed_driver)"/>
 
     <!-- Output Variable -->
     <arg name="detected_persons_pub_topic" default="/spencer/perception_internal/detected_persons/rgbd_front_top/upper_body"/>
-    <!-- <arg name="detected_persons_pub_topic" default="/spencer/perception_internal/detected_persons/rgbd_front_top/hog"/> -->
     <arg name="detection_id_offset" default="0"/>
     <arg name="detection_id_increment" default="1"/>
 
-    <include file="$(find realsense2_camera)/launch/rs_rgbd.launch" if="$(arg load_realsense_driver)">
+    <!-- realsense2_camera -->
+    <!-- <include file="$(find realsense2_camera)/launch/rs_rgbd.launch" if="$(arg load_realsense_driver)">
         <arg name="camera" value="/spencer/sensors/rgbd_front_top"/>
         <arg name="tf_prefix" value="rgbd_front_top"/>
-    </include>
+    </include> -->
     
-    <node pkg="rosbag" type="play" name="player" output="screen" args="-l --clock /home/alex-beh/ros1_ws/learn_ws/src/realsense_yolo/launch/bagfile/realsense_bag_tf.bag" if="$(arg play_from_bagfile)"/>
+    <!-- zed_camera -->
+    <!-- <include file="$(find zed_wrapper)/launch/zed.launch" if="$(arg load_zed_driver)">
+        <arg name="camera_name" value="spencer/sensors/rgbd_front_top"/>
+        <arg name="base_frame" value="rgbd_front_top"/>
+    </include> -->
 
-    <!-- <node pkg="tf" type="static_transform_publisher" name="yolo_to_camera" args="0 0 0 -1.5708 0 -1.5708 rgbd_front_top_link camera_link_yolo 10"/> -->
-    <!-- <node pkg="tf" type="static_transform_publisher" name="yolo_to_camera" args="0 0 0 -1.5708 0 -1.5708 base_footprint camera_link_yolo 10"/> -->
-    <!-- <node pkg="tf" type="static_transform_publisher" name="yolo_to_camera" args="0 0 0 -1.5708 0 -1.5708 rgbd_front_top_link camera_link_yolo 100" if="$(arg load_realsense_driver)" /> -->
+    <node pkg="rosbag" type="play" name="player" output="screen" args="-l --clock /home/alex-beh/ros1_ws/learn_ws/src/realsense_yolo/launch/bagfile/realsense_bag_tf.bag" if="$(arg play_from_bagfile)"/>
     
     <node pkg="realsense_yolo" type="realsense_yolo" name="yolov3_detector" output="screen" launch-prefix="">
-        <param name="depth_image_topic" value="$(arg depth_image_topic)"/> 
+        <param name="depth_image_topic" value="$(arg depth_image_topic_)"/> 
         <param name="camera_info_name" value="$(arg camera_info_topic)"/>
-        <param name="detection_output" value="$(arg detected_persons_pub_topic)"/>
+        <param name="detection_output" value="$(arg detected_persons_pub_topic)" if="$(arg load_zed_driver)"/>
+        <param name="pointcloud2_topic" value="$(arg pointcloud2_topic)" if="$(arg load_zed_driver)"/>
+        <param name="cameralink" value="$(arg camera_link)" if="$(arg load_zed_driver)"/>
     </node>
     
     <group if="$(arg yolo)">
-    
         <!-- darknet_ros.launch: 30fps | yolo_v3: 5fps++-->
         <include file="$(find darknet_ros)/launch/darknet_ros.launch"/>       
         <!-- <include file="$(find darknet_ros)/launch/yolo_v3.launch"/>            -->
-        
     </group>
 
     <group unless="$(arg yolo)">
-        <include file="$(find dnn_detect)/launch/dnn_detect.launch"/>       
+        <arg name="camera" default="/spencer/sensors/rgbd_front_top/zed_node/rgb" if="$(arg load_zed_driver)"/>
+        <arg name="image" default="image_rect_color" if="$(arg load_zed_driver)"/>
+
+        <arg name="camera" default="/spencer/sensors/rgbd_front_top/color" if="$(arg load_realsense_driver)"/>
+        <arg name="image" default="image_raw" if="$(arg load_realsense_driver)"/>
+
+        <include file="$(find dnn_detect)/launch/dnn_detect.launch">
+            <arg name="camera" value="$(arg camera)"/>
+            <arg name="image" value="$(arg image)"/>
+            <arg name="transport" value="compressed"/>
+        </include>     
+          
         <node pkg="realsense_yolo" type="mobilessd_adaptor" name="mobilessd_adaptor"/>
     </group>
 
