@@ -5,9 +5,7 @@ project(realsense_yolo)
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 set(CMAKE_C_FLAGS "-Wall -Wno-unused-result -Wno-unknown-pragmas -Wno-unused-variable -Wfatal-errors -fPIC ${CMAKE_C_FLAGS}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-find_package(OpenCV 3 REQUIRED)
-
+# find_package(PCL REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   roscpp
@@ -18,8 +16,12 @@ find_package(catkin REQUIRED COMPONENTS
   image_transport
   spencer_tracking_msgs
   message_generation
-  pcl_ros
+  # pcl_ros
+  tf
 )
+
+set(CMAKE_PREFIX_PATH "/usr/local/lib_opencv3411") 
+find_package(OpenCV 3.4.11 EXACT)
 
 find_package(CUDA REQUIRED)
 if (CUDA_FOUND)
@@ -147,11 +149,17 @@ if (CUDA_FOUND)
   cuda_add_executable(mobilessd_adaptor src/mobilessd_node.cpp src/realsense_yolo.cpp)
   target_link_libraries(mobilessd_adaptor ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
+  cuda_add_executable(mobilessd_adaptor_tensorRT src/mobilessd_node_tensorRT.cpp src/realsense_yolo.cpp)
+  target_link_libraries(mobilessd_adaptor_tensorRT ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
 else()
   add_executable(realsense_yolo src/realsense_yolo_node.cpp src/realsense_yolo.cpp)
   target_link_libraries(realsense_yolo ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
   add_executable(mobilessd_adaptor src/mobilessd_node.cpp src/realsense_yolo.cpp)
   target_link_libraries(mobilessd_adaptor ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+  add_executable(mobilessd_adaptor_tensorRT src/mobilessd_node_tensorRT.cpp src/realsense_yolo.cpp)
+  target_link_libraries(mobilessd_adaptor_tensorRT ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 endif()

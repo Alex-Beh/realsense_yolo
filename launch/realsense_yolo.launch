@@ -1,5 +1,7 @@
 <?xml version="1.0"?>
 <launch>
+
+    <arg name="tensorRT"                   default="true"/>
     <arg name="load_realsense_driver"   default="false"/>
     <arg name="load_zed_driver"         default="true"/>
 
@@ -7,21 +9,15 @@
     <arg name="visualization"           default="false"/>
     <arg name="play_from_bagfile"       default="false"/>
 
-    <!-- Input Variable -->
-    <group if="$(arg load_realsense_driver)">
-        <arg name="depth_image_topic_" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw"/>
-        <arg name="camera_info_topic"  default="/spencer/sensors/rgbd_front_top/depth/camera_info"/>
-    </group>
+    <!-- simulation change -->
+    <!-- <arg name="depth_image_topic_" default="/camera/depth/image_rect_raw"/>
+    <arg name="camera_info_topic"  default="/camera/depth/camera_info"/>
+    <arg name="camera" default="/camera/rgb"/>
+    <arg name="image" default="image_rect_color"/> -->
 
     <arg name="depth_image_topic_" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw" if="$(arg load_realsense_driver)"/>
     <arg name="camera_info_topic"  default="/spencer/sensors/rgbd_front_top/depth/camera_info" if="$(arg load_realsense_driver)"/>
 
-    <!-- this part is not working.... I don't know why yet.... -->
-    <group if="$(arg load_zed_driver)">
-        <arg name="depth_image_topic_" default="/spencer/sensors/rgbd_front_top/zed_node/depth/depth_registered"/>
-        <arg name="camera_info_topic"   default="/spencer/sensors/rgbd_front_top/zed_node/depth/camera_info"/>
-    </group>
-    
     <arg name="depth_image_topic_" default="/spencer/sensors/rgbd_front_top/zed_node/depth/depth_registered"  if="$(arg load_zed_driver)"/>
     <arg name="camera_info_topic" default="/spencer/sensors/rgbd_front_top/zed_node/depth/camera_info"  if="$(arg load_zed_driver)"/>
     <arg name="pointcloud2_topic" default="/spencer/sensors/rgbd_front_top/zed_node/point_cloud/cloud_registered"  if="$(arg load_zed_driver)"/>
@@ -56,8 +52,8 @@
     
     <group if="$(arg yolo)">
         <!-- darknet_ros.launch: 30fps | yolo_v3: 5fps++-->
-        <include file="$(find darknet_ros)/launch/darknet_ros.launch"/>       
-        <!-- <include file="$(find darknet_ros)/launch/yolo_v3.launch"/>            -->
+        <!-- <include file="$(find darknet_ros)/launch/darknet_ros.launch"/>        -->
+        <include file="$(find darknet_ros)/launch/yolo_v4.launch"/>           
     </group>
 
     <group unless="$(arg yolo)">
@@ -67,13 +63,32 @@
         <arg name="camera" default="/spencer/sensors/rgbd_front_top/color" if="$(arg load_realsense_driver)"/>
         <arg name="image" default="image_raw" if="$(arg load_realsense_driver)"/>
 
-        <include file="$(find dnn_detect)/launch/dnn_detect.launch">
-            <arg name="camera" value="$(arg camera)"/>
-            <arg name="image" value="$(arg image)"/>
-            <arg name="transport" value="compressed"/>
-        </include>     
-          
-        <node pkg="realsense_yolo" type="mobilessd_adaptor" name="mobilessd_adaptor"/>
+        <group if="$(arg tensorRT)">
+            <node pkg="realsense_yolo" type="mobilessd_adaptor_tensorRT" name="mobilessd_adaptor_tensorRT"/>
+            <node pkg="ros_deep_learning" type="detectnet_3D" name="tensorRT_detectnet_3D">
+                <remap from="/tensorRT_detectnet_3D/image_in" to="/spencer/sensors/rgbd_front_top/color/image_rect_color"/>
+                <remap from="/tensorRT_detectnet_3D/detections" to="/detectnet/detections"/>
+                <param name="model_name" value="ssd-inception-v2"/>
+                <!-- <param name="model_name" value="pednet"/> -->
+                <!-- 
+                ssd-mobilenet-v1 : 91 (COCO classes)
+                ssd-mobilenet-v2 : 91 (COCO classes)
+                ssd-inception-v2 : 91 (COCO classes)
+                pednet           : pedestrians
+                multiped         : pedestrians, luggage
+                -->
+            </node>
+        </group>
+
+        <group unless="$(arg tensorRT)">
+            <include file="$(find dnn_detect)/launch/dnn_detect.launch">
+                <arg name="camera" value="$(arg camera)"/>
+                <arg name="image" value="$(arg image)"/>
+                <arg name="transport" value="compressed"/>
+            </include>     
+            
+            <node pkg="realsense_yolo" type="mobilessd_adaptor" name="mobilessd_adaptor"/>
+        </group>
     </group>
 
     <!-- RViz visualization -->

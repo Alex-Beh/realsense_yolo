@@ -29,7 +29,11 @@ namespace realsense_yolo{
 
 		// parameters name , variable_name, default value
 		nodeHandle_.param("depth_image_topic", depth_topic, std::string("/spencer/sensors/rgbd_front_top/depth/image_rect_raw"));
-		nodeHandle_.param("pointcloud2_topic", pointcloud2_topic, std::string("/spencer/sensors/rgbd_front_top/depth_registered/points"));
+
+		// simulation change
+		// nodeHandle_.param("pointcloud2_topic", pointcloud2_topic, std::string("/camera/depth/color/points"));
+		// nodeHandle_.param("cameralink", camera_link, std::string("camera_depth_optical_frame"));
+		nodeHandle_.param("pointcloud2_topic", pointcloud2_topic, std::string("/spencer/sensors/rgbd_front_top/depth_registered/points"));		
 		nodeHandle_.param("cameralink", camera_link, std::string("rgbd_front_top_depth_optical_frame"));
 
 		nodeHandle_.param("detection_output", detection_output_pub, std::string("/spencer/perception_internal/detected_persons/rgbd_front_top/upper_body"));
@@ -78,7 +82,8 @@ namespace realsense_yolo{
 	}
 
 	void realsense_yolo_detector::filterOutUnwantedDetections(const darknet_ros_msgs::BoundingBoxes::ConstPtr& yolo_detection_raw_result, 
-				const sensor_msgs::Image::ConstPtr& depth_image,const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg){		
+				const sensor_msgs::Image::ConstPtr& depth_image,const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg){
+		// gettimeofday(&program_start,NULL);		
 		int n = yolo_detection_raw_result->bounding_boxes.size();
 		std::vector<darknet_ros_msgs::BoundingBox> filtered_detections;
 		std::vector<int> erase_these_elements;
@@ -93,12 +98,18 @@ namespace realsense_yolo{
 		{
 			for(int i=0;i<n;i++){
 				for(auto &it:obj_list){
-					if(yolo_detection_raw_result->bounding_boxes[i].Class == it && yolo_detection_raw_result->bounding_boxes[i].probability>probability_threshold){
+					if(yolo_detection_raw_result->bounding_boxes[i].Class == it && 
+					yolo_detection_raw_result->bounding_boxes[i].probability>probability_threshold){
 						filtered_detections.push_back(yolo_detection_raw_result->bounding_boxes[i]);
 					}
+					// else{
+					// 	ROS_ERROR("Debuggingggg!");
+					// }
 				}
 			}
 
+
+			// gettimeofday(&check_start,NULL);
 			// Sometimes, there are two or even more bounding boxes per detected person. 
 			// Use nonmax suppression to only keep the bounding box with the highest confidence	
 			for (int i = 0; i < filtered_detections.size(); i++) {
@@ -131,10 +142,12 @@ namespace realsense_yolo{
 					filtered_detections_wo_doubles.push_back(filtered_detections[i]);
 				}
 			}
-		
+			// gettimeofday(&check_stop,NULL);
+			// ROS_ERROR("checking took %lu us\n", (check_stop.tv_sec - check_start.tv_sec) * 1000000 + check_stop.tv_usec - check_start.tv_usec);
+
 			// ROS_INFO("Raw: %d --- Detected %lu person!",n,filtered_detections_wo_doubles.size());
-			debug_message.no_detected_person = filtered_detections_wo_doubles.size();
-			debug_message.no_deleted_detection = erase_these_elements.size();
+			// debug_message.no_detected_person = filtered_detections_wo_doubles.size();
+			// debug_message.no_deleted_detection = erase_these_elements.size();
 
 		}
 		
@@ -150,11 +163,11 @@ namespace realsense_yolo{
 			ROS_ERROR("cv_bridge exception: %s", e.what());
 		}
 
-		cv::Mat cvImage_depth;
-		cv::Mat draw_result;
+		// cv::Mat cvImage_depth;
+		// cv::Mat draw_result;
 
-		cvImage_depth = cv_ptr->image;
-		draw_result = cvImage_depth.clone();
+		// cvImage_depth = cv_ptr->image;
+		// draw_result = cvImage_depth.clone();
 
 		for (int i = 0; i < filtered_detections_wo_doubles.size(); i++) {
 			float pixel_distance;
@@ -164,116 +177,118 @@ namespace realsense_yolo{
 			// TODO:  calculate the median of all the values inside the box region
 			pixel_distance = 0.001*(cv_ptr->image.at<u_int16_t>(pixel_height,pixel_width));
 
-			cv::putText(draw_result,std::to_string(pixel_distance),cv::Point2f(pixel_width,pixel_height),cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0,143,143), 2);
-			cv::circle(draw_result,cv::Point2f(pixel_width+10,pixel_height),10,cv::Scalar(0),2);
+			// cv::putText(draw_result,std::to_string(pixel_distance),cv::Point2f(pixel_width,pixel_height),cv::FONT_HERSHEY_DUPLEX, 1, cv::Scalar(0,143,143), 2);
+			// cv::circle(draw_result,cv::Point2f(pixel_width+10,pixel_height),10,cv::Scalar(0),2);
 
 			yolo_detection_xyz.emplace_back((bbox_t_3d(filtered_detections_wo_doubles[i],pixel_distance)));
 		}
 
-		sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::TYPE_16UC1, draw_result).toImageMsg();
-		yolo_image_pub.publish(msg);
+		// sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), sensor_msgs::image_encodings::TYPE_16UC1, draw_result).toImageMsg();
+		// yolo_image_pub.publish(msg);
 		
 		/*-------------- Publish Spencer data from Yolo detection ---------*/
 		// TODO: pass obj_list as vector into fillPeopleMessage()
 		auto detected_persons_msg = this->fillPeopleMessage(yolo_detection_xyz,"person",camera_link,pointcloud_msg);
 		people_position_pub.publish(detected_persons_msg);
 		
-		if(boudingbox_pcl){
-			this->calculate_boxes_pcl(pointcloud_msg,yolo_detection_raw_result->bounding_boxes);
-		}
-		else{
-			this->calculate_boxes(yolo_detection_xyz);
-		}
+		// if(boudingbox_pcl){
+		// 	this->calculate_boxes_pcl(pointcloud_msg,yolo_detection_raw_result->bounding_boxes);
+		// }
+		// else{
+		// 	this->calculate_boxes(yolo_detection_xyz);
+		// }
+		// gettimeofday(&program_stop,NULL);
+		// ROS_ERROR("took %lu us\n", (program_stop.tv_sec - program_start.tv_sec) * 1000000 + program_stop.tv_usec - program_start.tv_usec);
 	}
 
-	void realsense_yolo_detector::calculate_boxes_pcl(const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg,
-			std::vector<darknet_ros_msgs::BoundingBox> original_bboxes_){
-		/*
-		Reference Link: https://github.com/IntelligentRoboticsLabs/gb_visual_detection_3d
-		*/
-		sensor_msgs::PointCloud2 local_pointcloud;
-		sensor_msgs::PointCloud2 point_cloud_ = *pointcloud_msg;
+	// void realsense_yolo_detector::calculate_boxes_pcl(const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg,
+	// 		std::vector<darknet_ros_msgs::BoundingBox> original_bboxes_){
+	// 	/*
+	// 	Reference Link: https://github.com/IntelligentRoboticsLabs/gb_visual_detection_3d
+	// 	*/
+	// 	sensor_msgs::PointCloud2 local_pointcloud;
+	// 	sensor_msgs::PointCloud2 point_cloud_ = *pointcloud_msg;
 
-		//API: http://docs.ros.org/kinetic/api/pcl_ros/html/namespacepcl__ros.html#a34090d5c8739e1a31749ccf0fd807f91
-		try{
-			pcl_ros::transformPointCloud(camera_link, point_cloud_, local_pointcloud, tfListener_);
-  		}
-  		catch(tf::TransformException& ex){
-    		ROS_ERROR_STREAM("Transform error of sensor data: " << ex.what() << ", quitting callback");
-  		}
+	// 	//API: http://docs.ros.org/kinetic/api/pcl_ros/html/namespacepcl__ros.html#a34090d5c8739e1a31749ccf0fd807f91
+	// 	try{
+	// 		pcl_ros::transformPointCloud(camera_link, point_cloud_, local_pointcloud, tfListener_);
+  	// 	}
+  	// 	catch(tf::TransformException& ex){
+    // 		ROS_ERROR_STREAM("Transform error of sensor data: " << ex.what() << ", quitting callback");
+  	// 	}
 
-		pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcrgb(new pcl::PointCloud<pcl::PointXYZRGB>);
-  		pcl::fromROSMsg(local_pointcloud, *pcrgb);
+	// 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr pcrgb(new pcl::PointCloud<pcl::PointXYZRGB>);
+  	// 	pcl::fromROSMsg(local_pointcloud, *pcrgb);
 
-		realsense_yolo::BoundingBoxes3d boxes;
+	// 	realsense_yolo::BoundingBoxes3d boxes;
 
-  		boxes.header.frame_id = camera_link;
-		boxes.header.stamp = point_cloud_.header.stamp;
+  	// 	boxes.header.frame_id = camera_link;
+	// 	boxes.header.stamp = point_cloud_.header.stamp;
 
 		
-		if(pcrgb->size()>0){
-			for(auto bbx:original_bboxes_){
+	// 	if(pcrgb->size()>0){
+	// 		for(auto bbx:original_bboxes_){
 
-				if ((bbx.probability < probability_threshold) ||
-					(std::find(obj_list.begin(), obj_list.end(), bbx.Class) == obj_list.end()))
-				{
-				continue;
-				}
+	// 			if ((bbx.probability < probability_threshold) ||
+	// 				(std::find(obj_list.begin(), obj_list.end(), bbx.Class) == obj_list.end()))
+	// 			{
+	// 			continue;
+	// 			}
 
-				int center_x, center_y;
+	// 			int center_x, center_y;
 
-				center_x = (bbx.xmax + bbx.xmin) / 2;
-				center_y = (bbx.ymax + bbx.ymin) / 2;
+	// 			center_x = (bbx.xmax + bbx.xmin) / 2;
+	// 			center_y = (bbx.ymax + bbx.ymin) / 2;
 
-				int pcl_index = (center_y* pointcloud_msg->width) + center_x;
+	// 			int pcl_index = (center_y* pointcloud_msg->width) + center_x;
 
-				pcl::PointXYZRGB center_point =  pcrgb->at(pcl_index); 
+	// 			pcl::PointXYZRGB center_point =  pcrgb->at(pcl_index); 
 
-				if (std::isnan(center_point.x))
-					continue;
+	// 			if (std::isnan(center_point.x))
+	// 				continue;
 
-				float maxx, minx, maxy, miny, maxz, minz;
+	// 			float maxx, minx, maxy, miny, maxz, minz;
 
-				maxx = maxy = maxz =  -std::numeric_limits<float>::max();
-				minx = miny = minz =  std::numeric_limits<float>::max();
+	// 			maxx = maxy = maxz =  -std::numeric_limits<float>::max();
+	// 			minx = miny = minz =  std::numeric_limits<float>::max();
 
-				for (int i = bbx.xmin; i < bbx.xmax; i++){
-					for (int j = bbx.ymin; j < bbx.ymax; j++){
+	// 			for (int i = bbx.xmin; i < bbx.xmax; i++){
+	// 				for (int j = bbx.ymin; j < bbx.ymax; j++){
 
-						pcl_index = (j* pointcloud_msg->width) + i;
-						pcl::PointXYZRGB point =  pcrgb->at(pcl_index);
+	// 					pcl_index = (j* pointcloud_msg->width) + i;
+	// 					pcl::PointXYZRGB point =  pcrgb->at(pcl_index);
 
-						if (std::isnan(point.x))
-							continue;
+	// 					if (std::isnan(point.x))
+	// 						continue;
 
-						if (fabs(point.x - center_point.x) > probability_threshold)
-							continue;
+	// 					if (fabs(point.x - center_point.x) > probability_threshold)
+	// 						continue;
 
-						maxx = std::max(point.x, maxx);
-						maxy = std::max(point.y, maxy);
-						maxz = std::max(point.z, maxz);
-						minx = std::min(point.x, minx);
-						miny = std::min(point.y, miny);
-						minz = std::min(point.z, minz);
-					}
-				}
+	// 					maxx = std::max(point.x, maxx);
+	// 					maxy = std::max(point.y, maxy);
+	// 					maxz = std::max(point.z, maxz);
+	// 					minx = std::min(point.x, minx);
+	// 					miny = std::min(point.y, miny);
+	// 					minz = std::min(point.z, minz);
+	// 				}
+	// 			}
 
-				realsense_yolo::BoundingBox3d bbx_msg;
-				bbx_msg.Class = bbx.Class;
-				bbx_msg.probability = bbx.probability;
-				bbx_msg.xmin = minx;
-				bbx_msg.xmax = maxx;
-				bbx_msg.ymin = miny;
-				bbx_msg.ymax = maxy;
-				bbx_msg.zmin = minz;
-				bbx_msg.zmax = maxz;
+	// 			realsense_yolo::BoundingBox3d bbx_msg;
+	// 			bbx_msg.Class = bbx.Class;
+	// 			bbx_msg.probability = bbx.probability;
+	// 			bbx_msg.xmin = minx;
+	// 			bbx_msg.xmax = maxx;
+	// 			bbx_msg.ymin = miny;
+	// 			bbx_msg.ymax = maxy;
+	// 			bbx_msg.zmin = minz;
+	// 			bbx_msg.zmax = maxz;
 
-				boxes.bounding_boxes.push_back(bbx_msg); 
-			}
+	// 			boxes.bounding_boxes.push_back(bbx_msg); 
+	// 		}
 
-			this->draw_boxes(boxes);
-		}
-	}
+	// 		this->draw_boxes(boxes);
+	// 	}
+	// }
 
 	void realsense_yolo_detector::calculate_boxes(std::vector<bbox_t_3d> result_vec){
 		realsense_yolo::BoundingBoxes3d boxes;
@@ -436,14 +451,14 @@ namespace realsense_yolo{
 			}
    		}
 
-		debug_message.person_xyz = person_xyz;
+		// debug_message.person_xyz = person_xyz;
 
 		data_lock.unlock();
 
 		detected_persons.header.stamp = ros::Time::now();
 		detected_persons.header.frame_id = camera_frame_id;
 		
-		debug_yolo_pub.publish(debug_message);
+		// debug_yolo_pub.publish(debug_message);
 		
 		return detected_persons;
 		}

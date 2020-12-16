@@ -4,6 +4,7 @@
 #include <vector>
 #include <mutex>  
 #include <math.h>       /* isnan, sqrt */
+#include <sys/time.h>
 
 // ROS
 #include <ros/ros.h>
@@ -18,15 +19,15 @@
 #include <sensor_msgs/point_cloud_conversion.h>
 #include <image_transport/image_transport.h>
 #include <visualization_msgs/MarkerArray.h>
-#include <tf/transform_listener.h>
+// #include <tf/transform_listener.h>
 
 // darknet_ros
 #include <darknet_ros_msgs/BoundingBoxes.h>
 #include <darknet_ros_msgs/BoundingBox.h>
 
 // pcl
-#include <pcl_ros/point_cloud.h>
-#include <pcl_ros/transforms.h>
+// #include <pcl_ros/point_cloud.h>
+// #include <pcl_ros/transforms.h>
 
 // Opencv
 #include <cv_bridge/cv_bridge.h>
@@ -66,7 +67,7 @@ namespace realsense_yolo{
 
 	        ros::Publisher people_position_pub,bbox3d_pub,debug_yolo_pub;
 		    image_transport::Publisher yolo_image_pub;
-            tf::TransformListener tfListener_;
+            // tf::TransformListener tfListener_;
 
             // Parameter for nh.param()
             std::string detection_output_pub, camera_link, marker_array_topic, depth_topic,pointcloud2_topic;
@@ -82,6 +83,8 @@ namespace realsense_yolo{
             camera_info_vector intrinsic_camera_matrix;         // ?? why don't need constructor in the typedef struct 
             realsense_yolo::debug_yolo debug_message;
             bool boudingbox_pcl = false;
+            
+            struct timeval program_start,program_stop,check_start,check_stop;
 
             message_filters::Subscriber<darknet_ros_msgs::BoundingBoxes> m_yolo_detection_result_sub;
             message_filters::Subscriber<sensor_msgs::Image> m_depth_img_sub;
@@ -100,7 +103,7 @@ namespace realsense_yolo{
                     const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg);
 
             void draw_boxes(const realsense_yolo::BoundingBoxes3d boxes);
-            void calculate_boxes_pcl(const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg,  std::vector<darknet_ros_msgs::BoundingBox> original_bboxes_);
+            // void calculate_boxes_pcl(const sensor_msgs::PointCloud2::ConstPtr& pointcloud_msg,  std::vector<darknet_ros_msgs::BoundingBox> original_bboxes_);
             void calculate_boxes(std::vector<bbox_t_3d> result_vec);
     };
 }

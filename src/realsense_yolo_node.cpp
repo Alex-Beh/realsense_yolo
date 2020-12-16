@@ -23,5 +23,7 @@ int main(int argc, char** argv) {
         ros::spinOnce();
         loop_rate.sleep();
     }
+
+    ros::spin();
     return 0;
 }
