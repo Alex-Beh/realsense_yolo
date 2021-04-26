@@ -5,20 +5,26 @@ project(realsense_yolo)
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 set(CMAKE_C_FLAGS "-Wall -Wno-unused-result -Wno-unknown-pragmas -Wno-unused-variable -Wfatal-errors -fPIC ${CMAKE_C_FLAGS}")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-# find_package(PCL REQUIRED)
+
 find_package(catkin REQUIRED COMPONENTS
   cv_bridge
   roscpp
-  rospy
   std_msgs
-  actionlib
-  darknet_ros_msgs
-  image_transport
-  spencer_tracking_msgs
   message_generation
-  # pcl_ros
   tf
+  yolov4_trt_ros
 )
+
+message("Use spencer")
+add_definitions(-DWITH_SPENCER)
+
+# set(USE_GPU OFF CACHE BOOL "Build Tensorflow with GPU support")
+set(USE_SPENCER ON CACHE BOOL "Publising spencer message")
+if(USE_SPENCER)
+  message("Use spencer")
+  add_definitions(-DWITH_SPENCER)
+  find_package(catkin REQUIRED COMPONENTS spencer_tracking_msgs)
+endif(USE_SPENCER)
 
 set(CMAKE_PREFIX_PATH "/usr/local/lib_opencv3411") 
 find_package(OpenCV 3.4.11 EXACT)
@@ -53,59 +59,17 @@ add_message_files(
    FILES debug_yolo.msg BoundingBoxes3d.msg BoundingBox3d.msg
 )
 
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
-
-## Generate actions in the 'action' folder
-# add_action_files(
-#   FILES
-#   Action1.action
-#   Action2.action
-# )
-
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
    DEPENDENCIES
    std_msgs
 )
 
-################################################
-## Declare ROS dynamic reconfigure parameters ##
-################################################
 
-## To declare and build dynamic reconfigure parameters within this
-## package, follow these steps:
-## * In the file package.xml:
-##   * add a build_depend and a exec_depend tag for "dynamic_reconfigure"
-## * In this file (CMakeLists.txt):
-##   * add "dynamic_reconfigure" to
-##     find_package(catkin REQUIRED COMPONENTS ...)
-##   * uncomment the "generate_dynamic_reconfigure_options" section below
-##     and list every .cfg file to be processed
-
-## Generate dynamic reconfigure parameters in the 'cfg' folder
-# generate_dynamic_reconfigure_options(
-#   cfg/DynReconf1.cfg
-#   cfg/DynReconf2.cfg
-# )
-
-###################################
-## catkin specific configuration ##
-###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if your package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES realsense_yolo
-   CATKIN_DEPENDS roscpp rospy sensor_msgs std_msgs message_runtime
+   CATKIN_DEPENDS roscpp sensor_msgs std_msgs message_runtime
    LIBRARIES
     ${PROJECT_NAME}_lib
 #  DEPENDS system_lib
@@ -146,20 +110,25 @@ if (CUDA_FOUND)
   cuda_add_executable(realsense_yolo src/realsense_yolo_node.cpp src/realsense_yolo.cpp)
   target_link_libraries(realsense_yolo ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-  cuda_add_executable(mobilessd_adaptor src/mobilessd_node.cpp src/realsense_yolo.cpp)
+  cuda_add_executable(mobilessd_adaptor src/mobilessd_adaptor.cpp src/realsense_yolo.cpp)
   target_link_libraries(mobilessd_adaptor ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-  cuda_add_executable(mobilessd_adaptor_tensorRT src/mobilessd_node_tensorRT.cpp src/realsense_yolo.cpp)
+  cuda_add_executable(mobilessd_adaptor_tensorRT src/mobilenetssd_tensorRT_adaptor.cpp src/realsense_yolo.cpp)
   target_link_libraries(mobilessd_adaptor_tensorRT ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+  cuda_add_executable(yolov4_adaptor_tensorRT src/yolov4_tensorRT_adaptor.cpp src/realsense_yolo.cpp)
+  target_link_libraries(yolov4_adaptor_tensorRT ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 else()
   add_executable(realsense_yolo src/realsense_yolo_node.cpp src/realsense_yolo.cpp)
   target_link_libraries(realsense_yolo ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-  add_executable(mobilessd_adaptor src/mobilessd_node.cpp src/realsense_yolo.cpp)
+  add_executable(mobilessd_adaptor src/mobilessd_adaptor.cpp src/realsense_yolo.cpp)
   target_link_libraries(mobilessd_adaptor ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-  add_executable(mobilessd_adaptor_tensorRT src/mobilessd_node_tensorRT.cpp src/realsense_yolo.cpp)
+  add_executable(mobilessd_adaptor_tensorRT src/mobilenetssd_tensorRT_adaptor.cpp src/realsense_yolo.cpp)
   target_link_libraries(mobilessd_adaptor_tensorRT ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
+  add_executable(yolov4_adaptor_tensorRT src/yolov4_tensorRT_adaptor.cpp src/realsense_yolo.cpp)
+  target_link_libraries(yolov4_adaptor_tensorRT ${catkin_LIBRARIES} ${OpenCV_LIBS})
 endif()

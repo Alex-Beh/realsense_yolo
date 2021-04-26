@@ -1,19 +1,15 @@
 <?xml version="1.0"?>
 <launch>
 
-    <arg name="tensorRT"                   default="true"/>
+    <arg name="mobilenetssd_tensorRT"   default="false"/>
+    <arg name="yolov4_tensorRT"         default="false"/>
+
     <arg name="load_realsense_driver"   default="false"/>
     <arg name="load_zed_driver"         default="true"/>
 
     <arg name="yolo"                    default="false"/>
     <arg name="visualization"           default="false"/>
     <arg name="play_from_bagfile"       default="false"/>
-
-    <!-- simulation change -->
-    <!-- <arg name="depth_image_topic_" default="/camera/depth/image_rect_raw"/>
-    <arg name="camera_info_topic"  default="/camera/depth/camera_info"/>
-    <arg name="camera" default="/camera/rgb"/>
-    <arg name="image" default="image_rect_color"/> -->
 
     <arg name="depth_image_topic_" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw" if="$(arg load_realsense_driver)"/>
     <arg name="camera_info_topic"  default="/spencer/sensors/rgbd_front_top/depth/camera_info" if="$(arg load_realsense_driver)"/>
@@ -28,17 +24,6 @@
     <arg name="detection_id_offset" default="0"/>
     <arg name="detection_id_increment" default="1"/>
 
-    <!-- realsense2_camera -->
-    <!-- <include file="$(find realsense2_camera)/launch/rs_rgbd.launch" if="$(arg load_realsense_driver)">
-        <arg name="camera" value="/spencer/sensors/rgbd_front_top"/>
-        <arg name="tf_prefix" value="rgbd_front_top"/>
-    </include> -->
-    
-    <!-- zed_camera -->
-    <!-- <include file="$(find zed_wrapper)/launch/zed.launch" if="$(arg load_zed_driver)">
-        <arg name="camera_name" value="spencer/sensors/rgbd_front_top"/>
-        <arg name="base_frame" value="rgbd_front_top"/>
-    </include> -->
 
     <node pkg="rosbag" type="play" name="player" output="screen" args="-l --clock /home/alex-beh/ros1_ws/learn_ws/src/realsense_yolo/launch/bagfile/realsense_bag_tf.bag" if="$(arg play_from_bagfile)"/>
     
@@ -63,12 +48,13 @@
         <arg name="camera" default="/spencer/sensors/rgbd_front_top/color" if="$(arg load_realsense_driver)"/>
         <arg name="image" default="image_raw" if="$(arg load_realsense_driver)"/>
 
-        <group if="$(arg tensorRT)">
+        <group if="$(arg mobilenetssd_tensorRT)">
             <node pkg="realsense_yolo" type="mobilessd_adaptor_tensorRT" name="mobilessd_adaptor_tensorRT"/>
             <node pkg="ros_deep_learning" type="detectnet_3D" name="tensorRT_detectnet_3D">
                 <remap from="/tensorRT_detectnet_3D/image_in" to="/spencer/sensors/rgbd_front_top/color/image_rect_color"/>
                 <remap from="/tensorRT_detectnet_3D/detections" to="/detectnet/detections"/>
                 <param name="model_name" value="ssd-inception-v2"/>
+                <param name="threshold" value="0.4"/>
                 <!-- <param name="model_name" value="pednet"/> -->
                 <!-- 
                 ssd-mobilenet-v1 : 91 (COCO classes)
@@ -80,7 +66,11 @@
             </node>
         </group>
 
-        <group unless="$(arg tensorRT)">
+        <group if="$(arg yolov4_tensorRT)">
+            <node pkg="realsense_yolo" type="yolov4_adaptor_tensorRT" name="yolov4_adaptor_tensorRT"/>
+            <include file="$(find yolov4_trt_ros)/launch/yolov4_trt.launch"/>
+        </group>
+        <!-- <group unless="$(arg mobilenetssd_tensorRT)">
             <include file="$(find dnn_detect)/launch/dnn_detect.launch">
                 <arg name="camera" value="$(arg camera)"/>
                 <arg name="image" value="$(arg image)"/>
@@ -88,7 +78,7 @@
             </include>     
             
             <node pkg="realsense_yolo" type="mobilessd_adaptor" name="mobilessd_adaptor"/>
-        </group>
+        </group> -->
     </group>
 
     <!-- RViz visualization -->
