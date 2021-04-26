@@ -1,8 +1,9 @@
 string Class
 float64 probability
-float64 xmin
-float64 ymin
-float64 xmax
-float64 ymax
-float64 zmin
-float64 zmax
+int16 id
+int64 xmin
+int64 ymin
+int64 xmax
+int64 ymax
+int64 zmin
+int64 zmax
