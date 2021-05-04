@@ -9,11 +9,11 @@ X_{real} = (u-c_x)*\frac{Z_{real}}{f_x} \newline
 Y_{real} = (v-c_y)*\frac{Z_{real}}{f_y}
 
 2. PointCloud from PointCloud2 to get xyz
-\newline sensor\_msgs::convertPointCloud2ToPointCloud(*pointcloud\_msg, out\_cloud);\newline
-x\_center = \frac{(i.m\_bbox.x_{min}+i.m\_bbox.x{max})}{2};\newline
-y\_center = \frac{(i.m\_bbox.y_{min}+i.m\_bbox.y{max})}{2};\newline
-\therefore \newline
-int\hspace{0.2cm}ind = x_{centre} + y_{centre}\cdot pointcloud\_msg\rightarrow width; \newline
-X_{real}= (float)out\_cloud.points[ind].x; \newline
-Y_{real}= (float)out\_cloud.points[ind].y; \newline
-Z_{real}= (float)out\_cloud.points[ind].z; \newline
+\\ sensor\_msgs::convertPointCloud2ToPointCloud(*pointcloud\_msg, out\_cloud);\\
+x\_center = \frac{(i.m\_bbox.x_{min}+i.m\_bbox.x{max})}{2};\\
+y\_center = \frac{(i.m\_bbox.y_{min}+i.m\_bbox.y{max})}{2};\\
+\therefore 
+int\hspace{0.2cm}ind = x_{centre} + y_{centre}\cdot pointcloud\_msg\rightarrow width; \\
+X_{real}= (float)out\_cloud.points[ind].x; \\
+Y_{real}= (float)out\_cloud.points[ind].y; \\
+Z_{real}= (float)out\_cloud.points[ind].z; \\

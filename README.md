@@ -3,30 +3,48 @@ The motivation of this repository is to get the 3D object detection from 2D dete
 
 -------------
 ### Architecture
-The first object detecion model that I used is YOLOv3. I extract the 3D real world coordinate using the methods that have been described in the following section. Then I decided to use MobileNet-SSD model. Laziness to the max, I decided to translate the detection output from MobileNet-SSD into YOLOv3 detection msg act as the interface. The code structure will be (maybe...) rephrased in future.
+You can use any detectors with any ROS messages you like with this code. You just need to write an adaptor to convert the ROS messages into [realsense_yolo::BoundingBoxes3d.msg](msg/BoundingBoxes3d.msg), Here is an [example](yolov4_tensorRT_adaptor.cpp) for yolov4 tensorRT from  [ros_deep_learning](https://github.com/dusty-nv/ros_deep_learning)
 
-![code_architeture](doc/images/architecture.jpg)
+<p align="center">
+	<img src="doc/images/architecture.jpg">
+	code_architeture
+</p>
 
 -------------
 
 ### Dependencies
-* [darknet_ros](https://github.com/leggedrobotics/darknet_ros)
-* [dnn_detect](https://github.com/UbiquityRobotics/dnn_detect)
 * OpenCV 3
+* And the ROS message from your detector for the adaptor 
+-------------
+
+### Adaptor provided
+- MobileNet-SSD tensorRT from [ros_deep_learning](https://github.com/dusty-nv/ros_deep_learning)
+- yolov4 tensorRT from [yolov4_trt_ros](https://github.com/indra4837/yolov4_trt_ros)
+- MobileNet-SSD from [dnn_detect](https://github.com/UbiquityRobotics/dnn_detect)
 -------------
 ### Usage
-
+- set either mobilenetssd, mobilenetssd_tensorRT or yolov4_tensorRT in launch file to **true** ,then run the following command:</br>
+	```console
+	roslaunch realsense_yolo realsense_yolo.launch
+	```
 -------------
-### Pixel convert to Real distance:
+### How to convert Pixel distance to Real world distance:
  1. From Intrinsic Camera Calibration <br/>
-	 **Idea:** From YOLO detection result get xmin,xmaxmymin & ymax [Link](https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats#intrinsic_camera_calibration_of_the_kinect)
+	 **Idea:** From YOLO detection result get xmin,xmax,ymin & ymax </br>[Intrinsic_camera_calibration_of_the_kinect](https://vision.in.tum.de/data/datasets/rgbd-dataset/file_formats#intrinsic_camera_calibration_of_the_kinect)
 
-	![From_Intrinsic_Camera_Calibration](doc/images/From_Intrinsic_Camera_Calibration.png)
+	<p align="center">
+		<img src="doc/images/From_Intrinsic_Camera_Calibration1.png">
+		From_Intrinsic_Camera_Calibration
+	</p>
 	
  2. PointCloud from PointCloud2 to get xyz <br/>
-	 **Idea:** Convert PointCloud2 to PointCloud and get the distance from the respective pixel [Link](https://answers.ros.org/question/9239/reading-pointcloud2-in-c/) <br/>
+	 **Idea:** Convert PointCloud2 to PointCloud and get the distance from the respective pixel <br/>
+	 [Link](https://answers.ros.org/question/9239/reading-pointcloud2-in-c/) <br/>
 
-	![PointCloud_from_PointCloud2_to_get_xyz](doc/images/PointCloud_from_PointCloud2_to_get_xyz.png)
+	<p align="center">
+		<img src="doc/images/PointCloud_from_PointCloud2_to_get_xyz1.png">
+		PointCloud_from_PointCloud2_to_get_xyz
+	</p>
 -------------
 ### Troubleshooting
 1. Theora & Compressed Depth Image Transport **Error** while rosbag record
