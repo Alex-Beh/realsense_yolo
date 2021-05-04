@@ -10,19 +10,19 @@ class MobileNetAdaptor{
         MobileNetAdaptor(ros::NodeHandle &nh);
 
     private:
-        ros::NodeHandle node_handle_;
-        ros::Publisher results_pub;
-        ros::Subscriber dnn_results_sub ;
+        ros::NodeHandle m_nodeHandle;
+        ros::Publisher m_results_pub;
+        ros::Subscriber m_dectectionResults_sub ;
 
-        void fillYoloMessage(const vision_msgs::Detection2DArray::ConstPtr& mobilessd_result);
+        void fillAdaptorMessage(const vision_msgs::Detection2DArray::ConstPtr& mobilessd_result);
 };
 
-MobileNetAdaptor::MobileNetAdaptor(ros::NodeHandle &nh): node_handle_(nh){
-    results_pub = nh.advertise<realsense_yolo::BoundingBoxes3d>("/darknet_ros/bounding_boxes", 20);
-    dnn_results_sub = nh.subscribe("/detectnet/detections", 1000, &MobileNetAdaptor::fillYoloMessage,this);
+MobileNetAdaptor::MobileNetAdaptor(ros::NodeHandle &nh): m_nodeHandle(nh){
+    m_results_pub = nh.advertise<realsense_yolo::BoundingBoxes3d>("/darknet_ros/bounding_boxes", 20);
+    m_dectectionResults_sub = nh.subscribe("/detectnet/detections", 1000, &MobileNetAdaptor::fillAdaptorMessage,this);
 }
 
-void MobileNetAdaptor::fillYoloMessage(const vision_msgs::Detection2DArray::ConstPtr& mobilessd_result){
+void MobileNetAdaptor::fillAdaptorMessage(const vision_msgs::Detection2DArray::ConstPtr& mobilessd_result){
     realsense_yolo::BoundingBoxes3d yolo_boxes;
     yolo_boxes.header = mobilessd_result->header;
 
@@ -37,12 +37,11 @@ void MobileNetAdaptor::fillYoloMessage(const vision_msgs::Detection2DArray::Cons
         yolo_boxes.bounding_boxes.emplace_back(yolo_box);
     }
 
-    results_pub.publish(yolo_boxes);
+    m_results_pub.publish(yolo_boxes);
 }
 
 int main(int argc, char** argv) {
-
-    ros::init(argc, argv, "tensorRT_adaptor");
+    ros::init(argc, argv, "mobilenetSSD tensorRT_adaptor");
     ros::NodeHandle nh("~");
 
     //MobileNet-SSD part
