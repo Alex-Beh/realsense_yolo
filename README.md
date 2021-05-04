@@ -3,7 +3,7 @@ The motivation of this repository is to get the 3D object detection from 2D dete
 
 -------------
 ### Architecture
-You can use any detectors with any ROS messages you like with this code. You just need to write an adaptor to convert the ROS messages into [realsense_yolo::BoundingBoxes3d.msg](msg/BoundingBoxes3d.msg), Here is an [example](yolov4_tensorRT_adaptor.cpp) for yolov4 tensorRT from  [ros_deep_learning](https://github.com/dusty-nv/ros_deep_learning)
+You can use any detectors with any ROS messages you like with this code. You just need to write an adaptor to convert the ROS messages into [realsense_yolo::BoundingBoxes3d.msg](msg/BoundingBoxes3d.msg), Here is an [example](src/yolov4_tensorRT_adaptor.cpp) for yolov4 tensorRT from  [ros_deep_learning](https://github.com/dusty-nv/ros_deep_learning)
 
 <p align="center">
 	<img src="doc/images/architecture.jpg">
