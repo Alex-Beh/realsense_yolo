@@ -14,7 +14,6 @@
 #include <message_filters/synchronizer.h>
 #include <sensor_msgs/CameraInfo.h>
 #include <sensor_msgs/Image.h>
-#include <tf/transform_listener.h>
 #include <visualization_msgs/MarkerArray.h>
 
 #ifdef WITH_SPENCER
@@ -52,7 +51,6 @@ public:
 
 private:
   ros::NodeHandle nodeHandle_;
-  tf::TransformListener tfListener_;
 
   ros::Publisher people_position_pub, bbox3d_pub;
 
