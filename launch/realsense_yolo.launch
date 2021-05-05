@@ -7,7 +7,7 @@
     <arg name="load_realsense_driver"   default="false"/>
     <arg name="load_zed_driver"         default="true"/>
 
-    <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/depth/image_rect_raw" if="$(arg load_realsense_driver)"/>
+    <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/aligned_depth_to_color/image_raw" if="$(arg load_realsense_driver)"/>
     <arg name="camera_info_topic"  default="/spencer/sensors/rgbd_front_top/depth/camera_info" if="$(arg load_realsense_driver)"/>
 
     <arg name="depth_image_topic" default="/spencer/sensors/rgbd_front_top/zed_node/depth/depth_registered"  if="$(arg load_zed_driver)"/>
