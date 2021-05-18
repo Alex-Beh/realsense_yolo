@@ -13,6 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_generation
   tf
   yolov4_trt_ros
+  message_filters
+  image_transport
 )
 
 message("Use spencer")
@@ -26,8 +28,13 @@ if(USE_SPENCER)
   find_package(catkin REQUIRED COMPONENTS spencer_tracking_msgs)
 endif(USE_SPENCER)
 
-set(CMAKE_PREFIX_PATH "/usr/local/lib_opencv3411") 
-find_package(OpenCV 3.4.11 EXACT)
+list(APPEND CMAKE_PREFIX_PATH "/usr/local/libopencv3")
+find_package(OpenCV 3.4.11 REQUIRED)
+message("--!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--")
+message("-- OpenCV version: ${OpenCV_VERSION}")
+message("-- OpenCV include dirs: ${OpenCV_INCLUDE_DIRS}")
+message("-- catkin include dirs: ${catkin_INCLUDE_DIRS}")
+message("--!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!--")
 
 find_package(CUDA REQUIRED)
 if (CUDA_FOUND)
@@ -69,7 +76,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES realsense_yolo
-   CATKIN_DEPENDS roscpp sensor_msgs std_msgs message_runtime
+   CATKIN_DEPENDS roscpp sensor_msgs std_msgs message_runtime message_filters image_transport cv_bridge
    LIBRARIES
     ${PROJECT_NAME}_lib
 #  DEPENDS system_lib
@@ -108,7 +115,7 @@ if (CUDA_FOUND)
   endif()
 
   cuda_add_executable(realsense_yolo src/realsense_yolo_node.cpp src/realsense_yolo.cpp)
-  target_link_libraries(realsense_yolo ${catkin_LIBRARIES} ${OpenCV_LIBS})
+  target_link_libraries(realsense_yolo ${catkin_LIBRARIES} ${OpenCV_LIBS} /opt/ros/noetic/lib/libmessage_filters.so /opt/ros/$ENV{ROS_DISTRO}/lib/libcv_bridge.so)
 
   cuda_add_executable(mobilessd_adaptor src/mobilessd_adaptor.cpp src/realsense_yolo.cpp)
   target_link_libraries(mobilessd_adaptor ${catkin_LIBRARIES} ${OpenCV_LIBS})
@@ -121,7 +128,7 @@ if (CUDA_FOUND)
 
 else()
   add_executable(realsense_yolo src/realsense_yolo_node.cpp src/realsense_yolo.cpp)
-  target_link_libraries(realsense_yolo ${catkin_LIBRARIES} ${OpenCV_LIBS})
+  target_link_libraries(realsense_yolo ${catkin_LIBRARIES} ${OpenCV_LIBS} /opt/ros/noetic/lib/libmessage_filters.so /opt/ros/$ENV{ROS_DISTRO}/lib/libcv_bridge.so)
 
   add_executable(mobilessd_adaptor src/mobilessd_adaptor.cpp src/realsense_yolo.cpp)
   target_link_libraries(mobilessd_adaptor ${catkin_LIBRARIES} ${OpenCV_LIBS})
